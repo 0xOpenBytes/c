@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "t",
+        "repositoryURL": "https://github.com/0xOpenBytes/t",
+        "state": {
+          "branch": null,
+          "revision": "18c820f4af1dc1a05ae38d84684bf28d85863305",
+          "version": "0.1.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
