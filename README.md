@@ -27,13 +27,31 @@ try t.assert(transformer.to(int), isEqualTo: string)
 ### Cache
 
 ```swift
-c.set(value: Double.pi, forKey: "🥧")
+let cache = c.cache()
 
-let pi: Double = c.get("🥧") ?? 0
+cache.set(value: Double.pi, forKey: "🥧")
+
+let pi: Double = cache.get("🥧") ?? 0
 
 try t.assert(pi, isEqualTo: .pi)
 
-let resolvedValue: Double = c.resolve("🥧")
+let resolvedValue: Double = cache.resolve("🥧")
 
 try t.assert(resolvedValue, isEqualTo: .pi)
+```
+
+
+### Global Cache
+
+```swift
+let someCache: Cache = ...
+
+// Set the value of a Cache with any hashable key
+c.set(value: someCache, forKey: "someCache")
+
+// Get an optional Cache using any hashable key
+let anotherCache: Cache? = c.get(0)
+
+// Require that a Cache exist using a `.get` with a force unwrap
+let requiredCache: Cache = c.resolve(0)
 ```
