@@ -27,7 +27,7 @@ try t.assert(transformer.to(int), isEqualTo: string)
 ### Cache
 
 ```swift
-let cache = c.cache()
+let cache = c.Cache()
 
 cache.set(value: Double.pi, forKey: "🥧")
 
@@ -36,6 +36,24 @@ let pi: Double = cache.get("🥧") ?? 0
 try t.assert(pi, isEqualTo: .pi)
 
 let resolvedValue: Double = cache.resolve("🥧")
+
+try t.assert(resolvedValue, isEqualTo: .pi)
+```
+
+### KeyedCache
+
+```swift
+enum CacheKey: Hashable { ... }
+
+let cache = c.KeyedCache<CacheKey>()
+
+cache.set(value: Double.pi, forKey: CacheKey.piKey)
+
+let pi: Double = cache.get(.piKey) ?? 0
+
+try t.assert(pi, isEqualTo: .pi)
+
+let resolvedValue: Double = cache.resolve(.piKey)
 
 try t.assert(resolvedValue, isEqualTo: .pi)
 ```
@@ -54,4 +72,6 @@ let anotherCache: Cache? = c.get(0)
 
 // Require that a Cache exist using a `.get` with a force unwrap
 let requiredCache: Cache = c.resolve(0)
+
+let keyedCache: KeyedCache<String> = c.resolve(...)
 ```

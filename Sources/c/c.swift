@@ -1,34 +1,77 @@
 import Foundation.NSLock
 
+public protocol Cacheable: AnyObject {
+    associatedtype Key: Hashable
+    
+    init(initialValues: [Key: Any])
+    
+    /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
+    func get<Value>(_ key: Key) -> Value?
+    
+    /// Resolve the value in the `cache` using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value is always in the `cache`.
+    func resolve<Value>(_ key: Key) -> Value
+    
+    /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
+    func set<Value>(value: Value, forKey key: Key)
+}
+
 /// Composition
 public enum c {
-    public class Cache {
+    public class Cache: Cacheable {
         private var lock: NSLock
         private var cache: [AnyHashable: Any]
         
-        public init(initialValues: [AnyHashable: Any] = [:]) {
+        required public init(initialValues: [AnyHashable: Any] = [:]) {
             lock = NSLock()
             cache = initialValues
         }
         
-        /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
         public func get<Value>(_ key: AnyHashable) -> Value? {
             lock.lock()
             defer { lock.unlock() }
             return cache[key] as? Value
         }
         
-        /// Resolve the value in the `cache` using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value is always in the `cache`.
         public func resolve<Value>(_ key: AnyHashable) -> Value { get(key)! }
         
-        /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
         public func set<Value>(value: Value, forKey key: AnyHashable) {
             lock.lock()
             cache[key] = value
             lock.unlock()
         }
     }
-
+    
+    public class KeyedCache<Key: Hashable>: Cacheable {
+        private var lock: NSLock
+        private var cache: [Key: Any]
+        
+        required public init(initialValues: [Key: Any] = [:]) {
+            lock = NSLock()
+            cache = initialValues
+        }
+        
+        public func get<Value>(_ key: Key) -> Value? {
+            lock.lock()
+            defer { lock.unlock() }
+            return cache[key] as? Value
+        }
+        
+        public func resolve<Value>(_ key: Key) -> Value { get(key)! }
+        
+        public func set<Value>(value: Value, forKey key: Key) {
+            lock.lock()
+            cache[key] = value
+            lock.unlock()
+        }
+    }
+    
+    @frozen public struct AnyCacheable {
+        public var base: Any
+        
+        public init<CacheType: Cacheable>(_ base: CacheType) {
+            self.base = base
+        }
+    }
 }
 
 // MARK: - Transformations
@@ -54,34 +97,32 @@ public extension c {
     ) -> BiDirectionalTransformation<From, To> { (from: from, to: to) }
 }
 
-// MARK: - Cache Factory
-public extension c {
-    /// Create a new Cache with initial values.
-    static func cache(initialValues: [AnyHashable: Any] = [:]) -> Cache {
-        Cache(initialValues: initialValues)
-    }
-}
-
 // MARK: - Global Cache
 
 public extension c {
     private static var lock = NSLock()
-    private static var caches: [AnyHashable: Cache] = [:]
+    private static var caches: [AnyHashable: AnyCacheable] = [:]
     
     /// Get the Cache using the `key`. This returns an optional value. If the value is `nil`, that means the Cache doesn't exist.
-    static func get(_ key: AnyHashable) -> Cache? {
+    static func get<CacheType>(
+        _ key: AnyHashable,
+        as: CacheType.Type = CacheType.self
+    ) -> CacheType? {
         lock.lock()
         defer { lock.unlock() }
-        return caches[key]
+        return caches[key]?.base as? CacheType
     }
     
     /// Resolve the Cache using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value always exists.
-    static func resolve(_ key: AnyHashable) -> Cache { get(key)! }
+    static func resolve<CacheType>(
+        _ key: AnyHashable,
+        as: CacheType.Type = CacheType.self
+    ) -> CacheType { get(key)! }
     
     /// Set the Cache using the `key`. This function will replace anything that has the same `key`.
-    static func set(value: Cache, forKey key: AnyHashable) {
+    static func set<CacheType: Cacheable>(value: CacheType, forKey key: AnyHashable) {
         lock.lock()
-        caches[key] = value
+        caches[key] = AnyCacheable(value)
         lock.unlock()
     }
 }
