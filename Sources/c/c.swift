@@ -6,10 +6,10 @@ public protocol Cacheable: AnyObject {
     init(initialValues: [Key: Any])
     
     /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
-    func get<Value>(_ key: Key) -> Value?
+    func get<Value>(_ key: Key, as: Value.Type) -> Value?
     
     /// Resolve the value in the `cache` using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value is always in the `cache`.
-    func resolve<Value>(_ key: Key) -> Value
+    func resolve<Value>(_ key: Key, as: Value.Type) -> Value
     
     /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
     func set<Value>(value: Value, forKey key: Key)
@@ -29,7 +29,7 @@ public enum c {
             cache = initialValues
         }
         
-        public func get<Value>(_ key: Key) -> Value? {
+        public func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
             lock.lock()
             defer { lock.unlock() }
             guard let value = cache[key] as? Value else {
@@ -55,7 +55,7 @@ public enum c {
             return value
         }
         
-        public func resolve<Value>(_ key: Key) -> Value { get(key)! }
+        public func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
         
         public func set<Value>(value: Value, forKey key: Key) {
             lock.lock()

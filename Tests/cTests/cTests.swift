@@ -265,7 +265,7 @@ final class cTests: XCTestCase {
         
         c.set(value: jsonAddress, forKey: "jsonAddress")
         
-        let address: c.JSON<AddressKey> = c.resolve("jsonAddress")
+        let address = c.resolve("jsonAddress", as: c.JSON<AddressKey>.self)
         
         let jsonCity: String? = address.resolve(.city)
         let expectedCity: String = expectedJSONAddress.resolve(.city)
