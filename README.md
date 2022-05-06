@@ -97,7 +97,7 @@ XCTAssertNil(invalid_key)
 
 json.set(value: "Leif", forKey: .name)
 
-XCTAssertEqual(json.resolve(.name), "Leif")
+XCTAssertEqual(json.resolve(.name), "Leif"
 ```
 
 
