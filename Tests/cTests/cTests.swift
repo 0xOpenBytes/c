@@ -156,9 +156,6 @@ final class cTests: XCTestCase {
     }
     
     func testJSON() {
-        typealias Compose = c
-        typealias JSON = Compose.JSON
-        
         enum MockJSONKey: String, Hashable {
             case name, number, bool, invalid_key
         }
@@ -171,7 +168,7 @@ final class cTests: XCTestCase {
         
         let jsonData: Data = try! JSONEncoder().encode(MockJSON(name: "Twitch", number: 5, bool: false))
         
-        let json: JSON<MockJSONKey> = JSON(data: jsonData)
+        let json: c.JSON<MockJSONKey> = .init(data: jsonData)
         
         XCTAssertEqual(json.resolve(.name), "Twitch")
         XCTAssertEqual(json.resolve(.number), 5)

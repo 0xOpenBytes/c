@@ -70,6 +70,36 @@ let nilValue: Double? = cache.get(.piKey)
 try t.assert(isNil: nilValue)
 ```
 
+### JSON
+```swift
+enum MockJSONKey: String, Hashable {
+    case name, number, bool, invalid_key
+}
+
+struct MockJSON: Codable {
+    var name: String
+    var number: Int
+    var bool: Bool
+}
+
+let jsonData: Data = try! JSONEncoder().encode(MockJSON(name: "Twitch", number: 5, bool: false))
+
+let json: c.JSON<MockJSONKey> = .init(data: jsonData)
+
+XCTAssertEqual(json.resolve(.name), "Twitch")
+XCTAssertEqual(json.resolve(.number), 5)
+XCTAssertEqual(json.resolve(.bool), false)
+
+let invalid_key: Bool? = json.get(.invalid_key)
+
+XCTAssertNil(json.get(.invalid_key))
+XCTAssertNil(invalid_key)
+
+json.set(value: "Leif", forKey: .name)
+
+XCTAssertEqual(json.resolve(.name), "Leif")
+```
+
 
 ### Global Cache
 
