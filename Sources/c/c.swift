@@ -29,7 +29,7 @@ public enum c {
             cache = initialValues
         }
         
-        public func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
+        open func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
             lock.lock()
             defer { lock.unlock() }
             guard let value = cache[key] as? Value else {
@@ -55,15 +55,15 @@ public enum c {
             return value
         }
         
-        public func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
+        open func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
         
-        public func set<Value>(value: Value, forKey key: Key) {
+        open func set<Value>(value: Value, forKey key: Key) {
             lock.lock()
             cache[key] = value
             lock.unlock()
         }
         
-        public func remove(_ key: Key) {
+        open func remove(_ key: Key) {
             lock.lock()
             cache[key] = nil
             lock.unlock()
