@@ -20,7 +20,7 @@ public protocol Cacheable: AnyObject {
 
 /// Composition
 public enum c {
-    public class KeyedCache<Key: Hashable>: Cacheable {
+    open class KeyedCache<Key: Hashable>: Cacheable {
         fileprivate var lock: NSLock
         fileprivate var cache: [Key: Any]
         
