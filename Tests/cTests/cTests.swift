@@ -30,6 +30,12 @@ final class cTests: XCTestCase {
                     let resolvedValue: Double = cache.resolve("🥧")
                     
                     try t.assert(resolvedValue, isEqualTo: .pi)
+                    
+                    cache.remove("🥧")
+                    
+                    let nilValue: Double? = cache.get("🥧")
+                    
+                    try t.assert(isNil: nilValue)
                 }
                 
                 try t.expect("that the global cache works") {
@@ -109,7 +115,7 @@ final class cTests: XCTestCase {
         XCTAssert(
             t.suite {
                 let somePerson = Person()
-
+                
                 try t.expect {
                     try t.assert(
                         somePerson.l_appID,
@@ -147,5 +153,136 @@ final class cTests: XCTestCase {
                 }
             }
         )
+    }
+    
+    func testJSON() {
+        enum MockJSONKey: String, Hashable {
+            case name, number, bool, invalid_key
+        }
+        
+        struct MockJSON: Codable {
+            var name: String
+            var number: Int
+            var bool: Bool
+        }
+        
+        let jsonData: Data = try! JSONEncoder().encode(MockJSON(name: "Twitch", number: 5, bool: false))
+        
+        let json: c.JSON<MockJSONKey> = .init(data: jsonData)
+        
+        XCTAssertEqual(json.resolve(.name), "Twitch")
+        XCTAssertEqual(json.resolve(.number), 5)
+        XCTAssertEqual(json.resolve(.bool), false)
+        
+        let invalid_key: Bool? = json.get(.invalid_key)
+        
+        XCTAssertNil(json.get(.invalid_key))
+        XCTAssertNil(invalid_key)
+        
+        json.set(value: "Leif", forKey: .name)
+        
+        XCTAssertEqual(json.resolve(.name), "Leif")
+    }
+    
+    func testNestedJSON_integration() {
+        // MARK: - Models
+        
+        enum UserKey: String, Hashable {
+            case name, address
+        }
+        
+        struct User: Codable, Identifiable {
+            let id: Int
+            let name: String
+            let username: String
+            let email: String
+            let address: Address
+            let phone: String
+            let website: String
+            let company: Company
+        }
+        
+        struct Address: Codable, Equatable {
+            let street: String
+            let suite: String
+            let city: String
+            let zipcode: String
+            let geo: Coordinate
+        }
+        
+        struct Coordinate: Codable, Equatable {
+            let lat: String
+            let lng: String
+        }
+        
+        struct Company: Codable {
+            let name: String
+            let catchPhrase: String
+            let bs: String
+        }
+        
+        // MARK: - Test
+        
+        let url = URL(string: "https://jsonplaceholder.typicode.com/users")!
+        
+        let sema = DispatchSemaphore(value: 0)
+        
+        var json: [c.JSON<UserKey>] = []
+        
+        URLSession.shared.dataTask(
+            with: url,
+            completionHandler: { data, response, error in
+                defer { sema.signal() }
+                
+                guard let data = data else {
+                    return
+                }
+                
+                json = c.JSON.array(data: data)
+            }
+        )
+            .resume()
+        
+        sema.wait()
+        
+        XCTAssertNotNil(json.first)
+        XCTAssertEqual(json.first?.resolve(.name), "Leanne Graham")
+        
+        enum AddressKey: String, Hashable {
+            case city
+            case geo
+        }
+        
+        let userAddress = Address(street: "", suite: "", city: "Gwenborough", zipcode: "", geo: Coordinate(lat: "-37.3159", lng: "81.1496"))
+        let expectedJSONAddress = c.JSON<AddressKey>(data: try! JSONEncoder().encode(userAddress))
+        
+        guard let value = json.first else {
+            XCTFail()
+            return
+        }
+        
+        let jsonAddress: c.JSON<AddressKey> = value.json(.address)!
+        
+        c.set(value: jsonAddress, forKey: "jsonAddress")
+        
+        let address = c.resolve("jsonAddress", as: c.JSON<AddressKey>.self)
+        
+        let jsonCity: String? = address.resolve(.city)
+        let expectedCity: String = expectedJSONAddress.resolve(.city)
+        
+        XCTAssertEqual(jsonCity, expectedCity)
+        
+        enum GeoKey: String, Hashable {
+            case lat
+            case lng
+        }
+        
+        let jsonGeo: c.JSON<GeoKey> = address.json(.geo)!
+        let expectedJSONGeo: c.JSON<GeoKey> = expectedJSONAddress.json(.geo)!
+        
+        let jsonLat: String? = jsonGeo.resolve(.lat)
+        let expectedLat: String = expectedJSONGeo.resolve(.lat)
+        
+        XCTAssertEqual(jsonLat, expectedLat)
     }
 }

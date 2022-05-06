@@ -6,62 +6,138 @@ public protocol Cacheable: AnyObject {
     init(initialValues: [Key: Any])
     
     /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
-    func get<Value>(_ key: Key) -> Value?
+    func get<Value>(_ key: Key, as: Value.Type) -> Value?
     
     /// Resolve the value in the `cache` using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value is always in the `cache`.
-    func resolve<Value>(_ key: Key) -> Value
+    func resolve<Value>(_ key: Key, as: Value.Type) -> Value
     
     /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
     func set<Value>(value: Value, forKey key: Key)
+    
+    /// Remove the value in the `cache` using the `key`.
+    func remove(_ key: Key)
 }
 
 /// Composition
 public enum c {
-    public class Cache: Cacheable {
-        private var lock: NSLock
-        private var cache: [AnyHashable: Any]
-        
-        required public init(initialValues: [AnyHashable: Any] = [:]) {
-            lock = NSLock()
-            cache = initialValues
-        }
-        
-        public func get<Value>(_ key: AnyHashable) -> Value? {
-            lock.lock()
-            defer { lock.unlock() }
-            return cache[key] as? Value
-        }
-        
-        public func resolve<Value>(_ key: AnyHashable) -> Value { get(key)! }
-        
-        public func set<Value>(value: Value, forKey key: AnyHashable) {
-            lock.lock()
-            cache[key] = value
-            lock.unlock()
-        }
-    }
-    
     public class KeyedCache<Key: Hashable>: Cacheable {
-        private var lock: NSLock
-        private var cache: [Key: Any]
+        fileprivate var lock: NSLock
+        fileprivate var cache: [Key: Any]
         
         required public init(initialValues: [Key: Any] = [:]) {
             lock = NSLock()
             cache = initialValues
         }
         
-        public func get<Value>(_ key: Key) -> Value? {
+        public func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
             lock.lock()
             defer { lock.unlock() }
-            return cache[key] as? Value
+            guard let value = cache[key] as? Value else {
+                return nil
+            }
+            
+            let mirror = Mirror(reflecting: value)
+            
+            if mirror.displayStyle != .optional {
+                return value
+            }
+            
+            if mirror.children.isEmpty {
+                return nil
+            }
+            
+            guard let (_, unwrappedValue) = mirror.children.first else { return nil }
+            
+            guard let value = unwrappedValue as? Value else {
+                return nil
+            }
+            
+            return value
         }
         
-        public func resolve<Value>(_ key: Key) -> Value { get(key)! }
+        public func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
         
         public func set<Value>(value: Value, forKey key: Key) {
             lock.lock()
             cache[key] = value
             lock.unlock()
+        }
+        
+        public func remove(_ key: Key) {
+            lock.lock()
+            cache[key] = nil
+            lock.unlock()
+        }
+    }
+    
+    public class Cache: KeyedCache<AnyHashable> {
+        required public init(initialValues: [Key: Any] = [:]) {
+            super.init(initialValues: initialValues)
+        }
+    }
+    
+    public class JSON<Key: RawRepresentable & Hashable>: KeyedCache<Key> where Key.RawValue == String {
+        convenience public init(data: Data) {
+            var initialValues: [Key: Any] = [:]
+            
+            if
+                let json = try? JSONSerialization.jsonObject(with: data),
+                let jsonDictionary: [String: Any] = json as? [String: Any]
+            {
+                jsonDictionary.forEach { jsonKey, jsonValue in
+                    guard let key = Key(rawValue: jsonKey) else { return }
+                    
+                    initialValues[key] = jsonValue
+                }
+            }
+            
+            self.init(initialValues: initialValues)
+        }
+        
+        required public init(initialValues: [Key: Any]) {
+            super.init(initialValues: initialValues)
+        }
+        
+        public static func array(data: Data) -> [JSON] {
+            guard
+                let json = try? JSONSerialization.jsonObject(with: data),
+                let jsonArray = json as? [Any]
+            else { return [] }
+            
+            return jsonArray.compactMap { jsonObject in
+                guard let jsonDictionary = jsonObject as? [String: Any] else { return nil }
+                
+                var initialValues: [Key: Any] = [:]
+                
+                jsonDictionary.forEach { jsonKey, jsonValue in
+                    guard let key = Key(rawValue: jsonKey) else { return }
+                    
+                    initialValues[key] = jsonValue
+                }
+                
+                return JSON(initialValues: initialValues)
+            }
+        }
+        
+        public func json<Value: JSON<JSONKey>, JSONKey: RawRepresentable & Hashable>(
+            _ key: Key,
+            keyed: JSONKey.Type = JSONKey.self
+        ) -> JSON<JSONKey>? {
+            lock.lock()
+            defer { lock.unlock() }
+            guard let jsonDictionary = cache[key] as? [String: Any] else {
+                return nil
+            }
+            
+            var initialValues: [JSONKey: Any] = [:]
+            
+            jsonDictionary.forEach { jsonKey, jsonValue in
+                guard let key = JSONKey(rawValue: jsonKey) else { return }
+                
+                initialValues[key] = jsonValue
+            }
+            
+            return JSON<JSONKey>(initialValues: initialValues)
         }
     }
     
