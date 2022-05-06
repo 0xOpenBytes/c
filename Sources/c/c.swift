@@ -13,6 +13,9 @@ public protocol Cacheable: AnyObject {
     
     /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
     func set<Value>(value: Value, forKey key: Key)
+    
+    /// Remove the value in the `cache` using the `key`.
+    func remove(_ key: Key)
 }
 
 /// Composition
@@ -57,6 +60,12 @@ public enum c {
         public func set<Value>(value: Value, forKey key: Key) {
             lock.lock()
             cache[key] = value
+            lock.unlock()
+        }
+        
+        public func remove(_ key: Key) {
+            lock.lock()
+            cache[key] = nil
             lock.unlock()
         }
     }
