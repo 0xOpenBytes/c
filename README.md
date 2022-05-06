@@ -38,6 +38,12 @@ try t.assert(pi, isEqualTo: .pi)
 let resolvedValue: Double = cache.resolve("🥧")
 
 try t.assert(resolvedValue, isEqualTo: .pi)
+                    
+cache.remove("🥧")
+
+let nilValue: Double? = cache.get("🥧")
+
+try t.assert(isNil: nilValue)
 ```
 
 ### KeyedCache
@@ -56,6 +62,12 @@ try t.assert(pi, isEqualTo: .pi)
 let resolvedValue: Double = cache.resolve(.piKey)
 
 try t.assert(resolvedValue, isEqualTo: .pi)
+                    
+cache.remove(.piKey)
+
+let nilValue: Double? = cache.get(.piKey)
+
+try t.assert(isNil: nilValue)
 ```
 
 

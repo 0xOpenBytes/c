@@ -30,6 +30,12 @@ final class cTests: XCTestCase {
                     let resolvedValue: Double = cache.resolve("🥧")
                     
                     try t.assert(resolvedValue, isEqualTo: .pi)
+                    
+                    cache.remove("🥧")
+                    
+                    let nilValue: Double? = cache.get("🥧")
+                    
+                    try t.assert(isNil: nilValue)
                 }
                 
                 try t.expect("that the global cache works") {
