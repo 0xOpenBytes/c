@@ -25,30 +25,15 @@ public protocol Cacheable: AnyObject {
     func contains(_ key: Key) -> Bool
     
     /// Checks to make sure the cache has the required keys, otherwise it will throw an error
-    func require(keys: Set<Key>) throws
+    func require(keys: Set<Key>) throws -> Self
     
     /// Checks to make sure the cache has the required key, otherwise it will throw an error
-    func require(_ key: Key) throws
+    func require(_ key: Key) throws -> Self
     
     /// Returns a Dictionary containing only the key value pairs where the value is the same type as the generic type `Value`
     func valuesInCache<Value>(
         ofType: Value.Type
     ) -> [Key: Value]
-}
-
-public extension Cacheable {
-    func require(keys: Set<Key>) throws {
-        let missingKeys = keys
-            .filter { contains($0) == false }
-        
-        guard missingKeys.isEmpty else {
-            throw MissingRequiredKeysError(keys: missingKeys)
-        }
-    }
-    
-    func require(_ key: Key) throws {
-        try require(keys: [key])
-    }
 }
 
 /// Composition
@@ -104,6 +89,21 @@ public enum c {
         
         open func contains(_ key: Key) -> Bool {
             cache[key] != nil
+        }
+        
+        open func require(keys: Set<Key>) throws -> Self {
+            let missingKeys = keys
+                .filter { contains($0) == false }
+    
+            guard missingKeys.isEmpty else {
+                throw MissingRequiredKeysError(keys: missingKeys)
+            }
+    
+            return self
+        }
+        
+        open func require(_ key: Key) throws -> Self {
+            try require(keys: [key])
         }
         
         open func valuesInCache<Value>(

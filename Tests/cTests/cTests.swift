@@ -29,7 +29,7 @@ final class cTests: XCTestCase {
                     
                     let resolvedValue: Double = cache.resolve("🥧")
                     
-                    try t.assert(cache.contains("🥧"))
+                    try t.assert(try cache.require("🥧").contains("🥧"))
                     
                     try t.assert(resolvedValue, isEqualTo: .pi)
                     
