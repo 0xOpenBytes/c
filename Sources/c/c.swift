@@ -1,5 +1,9 @@
 import Foundation.NSLock
 
+public struct MissingRequiredKeysError<Key: Hashable>: Error {
+    public let keys: Set<Key>
+}
+
 public protocol Cacheable: AnyObject {
     associatedtype Key: Hashable
     
@@ -16,6 +20,35 @@ public protocol Cacheable: AnyObject {
     
     /// Remove the value in the `cache` using the `key`.
     func remove(_ key: Key)
+    
+    /// Checks if the given `key` has a value or not
+    func contains(_ key: Key) -> Bool
+    
+    /// Checks to make sure the cache has the required keys, otherwise it will throw an error
+    func require(keys: Set<Key>) throws
+    
+    /// Checks to make sure the cache has the required key, otherwise it will throw an error
+    func require(_ key: Key) throws
+    
+    /// Returns a Dictionary containing only the key value pairs where the value is the same type as the generic type `Value`
+    func valuesInCache<Value>(
+        ofType: Value.Type
+    ) -> [Key: Value]
+}
+
+public extension Cacheable {
+    func require(keys: Set<Key>) throws {
+        let missingKeys = keys
+            .filter { contains($0) == false }
+        
+        guard missingKeys.isEmpty else {
+            throw MissingRequiredKeysError(keys: missingKeys)
+        }
+    }
+    
+    func require(_ key: Key) throws {
+        try require(keys: [key])
+    }
 }
 
 /// Composition
@@ -67,6 +100,16 @@ public enum c {
             lock.lock()
             cache[key] = nil
             lock.unlock()
+        }
+        
+        open func contains(_ key: Key) -> Bool {
+            cache[key] != nil
+        }
+        
+        open func valuesInCache<Value>(
+            ofType: Value.Type = Value.self
+        ) -> [Key: Value] {
+            cache.compactMapValues { $0 as? Value }
         }
     }
     

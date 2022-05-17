@@ -29,9 +29,13 @@ final class cTests: XCTestCase {
                     
                     let resolvedValue: Double = cache.resolve("🥧")
                     
+                    try t.assert(cache.contains("🥧"))
+                    
                     try t.assert(resolvedValue, isEqualTo: .pi)
                     
                     cache.remove("🥧")
+                    
+                    try t.assert(notTrue: cache.contains("🥧"))
                     
                     let nilValue: Double? = cache.get("🥧")
                     
@@ -173,6 +177,10 @@ final class cTests: XCTestCase {
         XCTAssertEqual(json.resolve(.name), "Twitch")
         XCTAssertEqual(json.resolve(.number), 5)
         XCTAssertEqual(json.resolve(.bool), false)
+        
+        XCTAssertEqual(json.valuesInCache(ofType: String.self).count, 1)
+        XCTAssertEqual(json.valuesInCache(ofType: Int.self).count, 2)
+        XCTAssertEqual(json.valuesInCache(ofType: Bool.self).count, 1)
         
         let invalid_key: Bool? = json.get(.invalid_key)
         
