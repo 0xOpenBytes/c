@@ -1,9 +1,5 @@
 import Foundation.NSLock
 
-public struct MissingRequiredKeysError<Key: Hashable>: Error {
-    public let keys: Set<Key>
-}
-
 public protocol Cacheable: AnyObject {
     associatedtype Key: Hashable
     
@@ -38,6 +34,14 @@ public protocol Cacheable: AnyObject {
 
 /// Composition
 public enum c {
+    public struct MissingRequiredKeysError<Key: Hashable>: Error {
+        public let keys: Set<Key>
+        
+        public init(keys: Set<Key>) {
+            self.keys = keys
+        }
+    }
+    
     open class KeyedCache<Key: Hashable>: Cacheable {
         fileprivate var lock: NSLock
         fileprivate var cache: [Key: Any]
