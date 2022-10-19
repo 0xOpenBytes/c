@@ -186,6 +186,25 @@ public enum c {
             
             return JSON<JSONKey>(initialValues: initialValues)
         }
+
+        public func array<Value: JSON<JSONKey>, JSONKey: RawRepresentable & Hashable>(
+            _ key: Key,
+            keyed: JSONKey.Type = JSONKey.self
+        ) -> [JSON<JSONKey>]? {
+            guard let jsonArray = get(key, as: [[String: Any]].self) else {
+                return nil
+            }
+
+            var values: [JSON<JSONKey>] = []
+
+            jsonArray.forEach { json in
+                guard let jsonData = try? JSONSerialization.data(withJSONObject: json) else { return }
+
+                values.append(JSON<JSONKey>(data: jsonData))
+            }
+
+            return values
+        }
     }
     
     @frozen public struct AnyCacheable {
