@@ -2,14 +2,17 @@ import Foundation.NSLock
 
 public protocol Cacheable: AnyObject {
     associatedtype Key: Hashable
+
+    /// Returns a Dictionary containing all the key value pairs of the cache
+    var allValues: [Key: Any] { get }
     
     init(initialValues: [Key: Any])
     
     /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
     func get<Value>(_ key: Key, as: Value.Type) -> Value?
     
-    /// Resolve the value in the `cache` using the `key`. This function uses `get` and force casts the value. This should only be used when you know the value is always in the `cache`.
-    func resolve<Value>(_ key: Key, as: Value.Type) -> Value
+    /// Resolve the value in the `cache` using the `key`. This should only be used when you know the value is always in the `cache`.
+    func resolve<Value>(_ key: Key, as: Value.Type) throws -> Value
     
     /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
     func set<Value>(value: Value, forKey key: Key)
@@ -30,6 +33,12 @@ public protocol Cacheable: AnyObject {
     func valuesInCache<Value>(
         ofType: Value.Type
     ) -> [Key: Value]
+}
+
+public extension Cacheable {
+    var allValues: [Key: Any] {
+        valuesInCache(ofType: Any.self)
+    }
 }
 
 /// Composition
