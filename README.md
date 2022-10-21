@@ -35,7 +35,7 @@ let pi: Double = cache.get("🥧") ?? 0
 
 try t.assert(pi, isEqualTo: .pi)
 
-let resolvedValue: Double = cache.resolve("🥧")
+let resolvedValue: Double = try cache.resolve("🥧")
 
 try t.assert(resolvedValue, isEqualTo: .pi)
                     
@@ -59,7 +59,7 @@ let pi: Double = cache.get(.piKey) ?? 0
 
 try t.assert(pi, isEqualTo: .pi)
 
-let resolvedValue: Double = cache.resolve(.piKey)
+let resolvedValue: Double = try cache.resolve(.piKey)
 
 try t.assert(resolvedValue, isEqualTo: .pi)
                     
@@ -86,9 +86,9 @@ let jsonData: Data = try! JSONEncoder().encode(MockJSON(name: "Twitch", number: 
 
 let json: c.JSON<MockJSONKey> = .init(data: jsonData)
 
-XCTAssertEqual(json.resolve(.name), "Twitch")
-XCTAssertEqual(json.resolve(.number), 5)
-XCTAssertEqual(json.resolve(.bool), false)
+XCTAssertEqual(try! json.resolve(.name), "Twitch")
+XCTAssertEqual(try! json.resolve(.number), 5)
+XCTAssertEqual(try! json.resolve(.bool), false)
 
 let invalid_key: Bool? = json.get(.invalid_key)
 
@@ -97,7 +97,7 @@ XCTAssertNil(invalid_key)
 
 json.set(value: "Leif", forKey: .name)
 
-XCTAssertEqual(json.resolve(.name), "Leif"
+XCTAssertEqual(try! json.resolve(.name), "Leif")
 ```
 
 
@@ -113,7 +113,7 @@ c.set(value: someCache, forKey: "someCache")
 let anotherCache: Cache? = c.get(0)
 
 // Require that a Cache exist using a `.get` with a force unwrap
-let requiredCache: Cache = c.resolve(0)
+let requiredCache: Cache = try c.resolve(0)
 
-let keyedCache: KeyedCache<String> = c.resolve(...)
+let keyedCache: KeyedCache<String> = try c.resolve(...)
 ```
