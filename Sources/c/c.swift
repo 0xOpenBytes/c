@@ -52,7 +52,7 @@ public enum c {
     }
     
     open class KeyedCache<Key: Hashable>: Cacheable {
-        fileprivate var lock: NSLock
+        fileprivate var lock: NSLock?
         fileprivate var cache: [Key: Any]
         
         required public init(initialValues: [Key: Any] = [:]) {
@@ -61,8 +61,8 @@ public enum c {
         }
         
         open func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
-            lock.lock()
-            defer { lock.unlock() }
+            lock?.lock()
+            defer { lock?.unlock() }
             guard let value = cache[key] as? Value else {
                 return nil
             }
@@ -89,15 +89,15 @@ public enum c {
         open func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
         
         open func set<Value>(value: Value, forKey key: Key) {
-            lock.lock()
+            lock?.lock()
             cache[key] = value
-            lock.unlock()
+            lock?.unlock()
         }
         
         open func remove(_ key: Key) {
-            lock.lock()
+            lock?.lock()
             cache[key] = nil
-            lock.unlock()
+            lock?.unlock()
         }
         
         open func contains(_ key: Key) -> Bool {
@@ -179,8 +179,8 @@ public enum c {
             _ key: Key,
             keyed: JSONKey.Type = JSONKey.self
         ) -> JSON<JSONKey>? {
-            lock.lock()
-            defer { lock.unlock() }
+            lock?.lock()
+            defer { lock?.unlock() }
             guard let jsonDictionary = cache[key] as? [String: Any] else {
                 return nil
             }
@@ -251,7 +251,7 @@ public extension c {
 // MARK: - Global Cache
 
 public extension c {
-    private static var lock = NSLock()
+    private static var lock: NSLock? = NSLock()
     private static var caches: [AnyHashable: AnyCacheable] = [:]
     
     /// Get the Cache using the `key`. This returns an optional value. If the value is `nil`, that means the Cache doesn't exist.
@@ -259,8 +259,8 @@ public extension c {
         _ key: AnyHashable,
         as: CacheType.Type = CacheType.self
     ) -> CacheType? {
-        lock.lock()
-        defer { lock.unlock() }
+        lock?.lock()
+        defer { lock?.unlock() }
         return caches[key]?.base as? CacheType
     }
     
@@ -272,8 +272,8 @@ public extension c {
     
     /// Set the Cache using the `key`. This function will replace anything that has the same `key`.
     static func set<CacheType: Cacheable>(value: CacheType, forKey key: AnyHashable) {
-        lock.lock()
+        lock?.lock()
         caches[key] = AnyCacheable(value)
-        lock.unlock()
+        lock?.unlock()
     }
 }
