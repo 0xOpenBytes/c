@@ -148,11 +148,11 @@ public enum c {
         open func require(keys: Set<Key>) throws -> Self {
             let missingKeys = keys
                 .filter { contains($0) == false }
-    
+
             guard missingKeys.isEmpty else {
                 throw MissingRequiredKeysError(keys: missingKeys)
             }
-    
+
             return self
         }
         
@@ -367,6 +367,11 @@ public extension c {
 public extension c {
     private static var lock = NSLock()
     private static var caches: [AnyHashable: AnyCacheable] = [:]
+
+    /// Checks if the given `key` has a Cache or not
+    static func contains(_ key: AnyHashable) -> Bool {
+        caches[key] != nil
+    }
     
     /// Get the Cache using the `key`. This returns an optional value. If the value is `nil`, that means the Cache doesn't exist.
     static func get<CacheType>(
@@ -382,7 +387,17 @@ public extension c {
     static func resolve<CacheType>(
         _ key: AnyHashable,
         as: CacheType.Type = CacheType.self
-    ) -> CacheType { get(key)! }
+    ) throws -> CacheType {
+        guard contains(key) else {
+            throw MissingRequiredKeysError(keys: [key])
+        }
+
+        guard let value: CacheType = get(key) else {
+            throw InvalidTypeError(expectedType: CacheType.self, actualValue: get(key))
+        }
+
+        return value
+    }
     
     /// Set the Cache using the `key`. This function will replace anything that has the same `key`.
     static func set<CacheType: Cacheable>(value: CacheType, forKey key: AnyHashable) {

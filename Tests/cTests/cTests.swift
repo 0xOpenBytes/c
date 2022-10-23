@@ -143,7 +143,7 @@ final class cTests: XCTestCase {
                         isEqualTo: "???"
                     )
                     
-                    c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).set(value: "😎", forKey: .appID)
+                    try c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).set(value: "😎", forKey: .appID)
                     
                     try t.assert(
                         c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID),
