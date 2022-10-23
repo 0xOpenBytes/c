@@ -27,7 +27,7 @@ final class cTests: XCTestCase {
                     
                     try t.assert(pi, isEqualTo: .pi)
                     
-                    let resolvedValue: Double = cache.resolve("🥧")
+                    let resolvedValue: Double = try cache.resolve("🥧")
                     
                     try t.assert(try cache.require("🥧").contains("🥧"))
                     
@@ -110,10 +110,10 @@ final class cTests: XCTestCase {
         
         struct Person {
             // Locally Accessed Cache
-            let l_appID: String = EnvironmentKey.appCache.resolve(EnvironmentKey.appID)
+            let l_appID: String = try! EnvironmentKey.appCache.resolve(EnvironmentKey.appID)
             
             // Globally Accessed Cache
-            let g_appID: String = c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID)
+            let g_appID: String = try! c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID)
         }
         
         XCTAssert(
@@ -143,7 +143,7 @@ final class cTests: XCTestCase {
                         isEqualTo: "???"
                     )
                     
-                    c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).set(value: "😎", forKey: .appID)
+                    try c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).set(value: "😎", forKey: .appID)
                     
                     try t.assert(
                         c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID),
@@ -172,11 +172,11 @@ final class cTests: XCTestCase {
         
         let jsonData: Data = try! JSONEncoder().encode(MockJSON(name: "Twitch", number: 5, bool: false))
         
-        let json: c.JSON<MockJSONKey> = .init(data: jsonData)
+        var json: c.JSON<MockJSONKey> = .init(data: jsonData)
         
-        XCTAssertEqual(json.resolve(.name), "Twitch")
-        XCTAssertEqual(json.resolve(.number), 5)
-        XCTAssertEqual(json.resolve(.bool), false)
+        XCTAssertEqual(try json.resolve(.name), "Twitch")
+        XCTAssertEqual(try json.resolve(.number), 5)
+        XCTAssertEqual(try json.resolve(.bool), false)
         
         XCTAssertEqual(json.valuesInCache(ofType: String.self).count, 1)
         XCTAssertEqual(json.valuesInCache(ofType: Int.self).count, 2)
@@ -189,10 +189,10 @@ final class cTests: XCTestCase {
         
         json.set(value: "Leif", forKey: .name)
         
-        XCTAssertEqual(json.resolve(.name), "Leif")
+        XCTAssertEqual(try json.resolve(.name), "Leif")
     }
     
-    func testNestedJSON_integration() {
+    func testNestedJSON_integration() throws {
         // MARK: - Models
         
         enum UserKey: String, Hashable {
@@ -254,7 +254,7 @@ final class cTests: XCTestCase {
         sema.wait()
         
         XCTAssertNotNil(json.first)
-        XCTAssertEqual(json.first?.resolve(.name), "Leanne Graham")
+        XCTAssertEqual(try json.first?.resolve(.name), "Leanne Graham")
         
         enum AddressKey: String, Hashable {
             case city
@@ -269,14 +269,10 @@ final class cTests: XCTestCase {
             return
         }
         
-        let jsonAddress: c.JSON<AddressKey> = value.json(.address)!
+        let jsonAddress: c.JSON<AddressKey> = try XCTUnwrap(value.json(.address))
         
-        c.set(value: jsonAddress, forKey: "jsonAddress")
-        
-        let address = c.resolve("jsonAddress", as: c.JSON<AddressKey>.self)
-        
-        let jsonCity: String? = address.resolve(.city)
-        let expectedCity: String = expectedJSONAddress.resolve(.city)
+        let jsonCity: String? = try jsonAddress.resolve(.city)
+        let expectedCity: String = try expectedJSONAddress.resolve(.city)
         
         XCTAssertEqual(jsonCity, expectedCity)
         
@@ -285,11 +281,11 @@ final class cTests: XCTestCase {
             case lng
         }
         
-        let jsonGeo: c.JSON<GeoKey> = address.json(.geo)!
-        let expectedJSONGeo: c.JSON<GeoKey> = expectedJSONAddress.json(.geo)!
+        let jsonGeo: c.JSON<GeoKey> = try XCTUnwrap(jsonAddress.json(.geo))
+        let expectedJSONGeo: c.JSON<GeoKey> = try XCTUnwrap(expectedJSONAddress.json(.geo))
         
-        let jsonLat: String? = jsonGeo.resolve(.lat)
-        let expectedLat: String = expectedJSONGeo.resolve(.lat)
+        let jsonLat: String? = try jsonGeo.resolve(.lat)
+        let expectedLat: String = try expectedJSONGeo.resolve(.lat)
         
         XCTAssertEqual(jsonLat, expectedLat)
     }
