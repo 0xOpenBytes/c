@@ -43,16 +43,47 @@ public extension Cacheable {
 
 /// Composition
 public enum c {
-    public struct MissingRequiredKeysError<Key: Hashable>: Error {
+    /// `Error` that reports the missing keys
+    public struct MissingRequiredKeysError<Key: Hashable>: LocalizedError {
+        /// Required keys
         public let keys: Set<Key>
-        
+
+        /// init for `MissingRequiredKeysError<Key>`
         public init(keys: Set<Key>) {
             self.keys = keys
+        }
+
+        /// Error description for `LocalizedError`
+        public var errorDescription: String? {
+            "Missing Required Keys: \(keys.map { "\($0)" }.joined(separator: ", "))"
+        }
+    }
+
+    /// `Error` that reports the expected type for a value
+    public struct InvalidTypeError<ExpectedType>: LocalizedError {
+        /// Expected type
+        public let expectedType: ExpectedType.Type
+
+        // Actual Value
+        public let actualValue: Any?
+
+        /// init for `InvalidTypeError<Key>`
+        public init(
+            expectedType: ExpectedType.Type,
+            actualValue: Any?
+        ) {
+            self.expectedType = expectedType
+            self.actualValue = actualValue
+        }
+
+        /// Error description for `LocalizedError`
+        public var errorDescription: String? {
+            "Invalid Type: (Expected: \(expectedType.self)) got \(type(of: actualValue))"
         }
     }
     
     open class KeyedCache<Key: Hashable>: Cacheable {
-        fileprivate var lock: NSLock?
+        fileprivate var lock: NSLock
         fileprivate var cache: [Key: Any]
         
         required public init(initialValues: [Key: Any] = [:]) {
@@ -61,8 +92,8 @@ public enum c {
         }
         
         open func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
-            lock?.lock()
-            defer { lock?.unlock() }
+            lock.lock()
+            defer { lock.unlock() }
             guard let value = cache[key] as? Value else {
                 return nil
             }
@@ -86,18 +117,28 @@ public enum c {
             return value
         }
         
-        open func resolve<Value>(_ key: Key, as: Value.Type = Value.self) -> Value { get(key)! }
+        open func resolve<Value>(_ key: Key, as: Value.Type = Value.self) throws -> Value {
+            guard contains(key) else {
+                throw MissingRequiredKeysError(keys: [key])
+            }
+
+            guard let value: Value = get(key) else {
+                throw InvalidTypeError(expectedType: Value.self, actualValue: get(key))
+            }
+
+            return value
+        }
         
         open func set<Value>(value: Value, forKey key: Key) {
-            lock?.lock()
+            lock.lock()
             cache[key] = value
-            lock?.unlock()
+            lock.unlock()
         }
         
         open func remove(_ key: Key) {
-            lock?.lock()
+            lock.lock()
             cache[key] = nil
-            lock?.unlock()
+            lock.unlock()
         }
         
         open func contains(_ key: Key) -> Bool {
@@ -132,8 +173,18 @@ public enum c {
         }
     }
     
-    public class JSON<Key: RawRepresentable & Hashable>: KeyedCache<Key> where Key.RawValue == String {
-        convenience public init(data: Data) {
+    public struct JSON<Key: RawRepresentable & Hashable> where Key.RawValue == String {
+        private var cache: [Key: Any]
+
+        public var allValues: [Key: Any] {
+            valuesInCache(ofType: Any.self)
+        }
+
+        public init(initialValues: [Key: Any]) {
+            self.cache = initialValues
+        }
+
+        public init(data: Data) {
             var initialValues: [Key: Any] = [:]
             
             if
@@ -148,10 +199,6 @@ public enum c {
             }
             
             self.init(initialValues: initialValues)
-        }
-        
-        required public init(initialValues: [Key: Any]) {
-            super.init(initialValues: initialValues)
         }
         
         public static func array(data: Data) -> [JSON] {
@@ -175,12 +222,10 @@ public enum c {
             }
         }
         
-        public func json<Value: JSON<JSONKey>, JSONKey: RawRepresentable & Hashable>(
+        public func json<JSONKey: RawRepresentable & Hashable>(
             _ key: Key,
             keyed: JSONKey.Type = JSONKey.self
         ) -> JSON<JSONKey>? {
-            lock?.lock()
-            defer { lock?.unlock() }
             guard let jsonDictionary = cache[key] as? [String: Any] else {
                 return nil
             }
@@ -196,7 +241,7 @@ public enum c {
             return JSON<JSONKey>(initialValues: initialValues)
         }
 
-        public func array<Value: JSON<JSONKey>, JSONKey: RawRepresentable & Hashable>(
+        public func array<JSONKey: RawRepresentable & Hashable>(
             _ key: Key,
             keyed: JSONKey.Type = JSONKey.self
         ) -> [JSON<JSONKey>]? {
@@ -213,6 +258,75 @@ public enum c {
             }
 
             return values
+        }
+
+        public func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
+            guard let value = cache[key] as? Value else {
+                return nil
+            }
+
+            let mirror = Mirror(reflecting: value)
+
+            if mirror.displayStyle != .optional {
+                return value
+            }
+
+            if mirror.children.isEmpty {
+                return nil
+            }
+
+            guard let (_, unwrappedValue) = mirror.children.first else { return nil }
+
+            guard let value = unwrappedValue as? Value else {
+                return nil
+            }
+
+            return value
+        }
+
+        public func resolve<Value>(_ key: Key, as: Value.Type = Value.self) throws -> Value {
+            guard contains(key) else {
+                throw MissingRequiredKeysError(keys: [key])
+            }
+
+            guard let value: Value = get(key) else {
+                throw InvalidTypeError(expectedType: Value.self, actualValue: get(key))
+            }
+
+            return value
+        }
+
+        public mutating func set<Value>(value: Value, forKey key: Key) {
+            cache[key] = value
+        }
+
+        public mutating func remove(_ key: Key) {
+            cache[key] = nil
+        }
+
+        public func contains(_ key: Key) -> Bool {
+            cache[key] != nil
+        }
+
+        public func require(keys: Set<Key>) throws -> Self {
+            let missingKeys = keys
+                .filter { contains($0) == false }
+
+            guard missingKeys.isEmpty else {
+                throw MissingRequiredKeysError(keys: missingKeys)
+            }
+
+            return self
+        }
+
+        public func require(_ key: Key) throws -> Self {
+            try require(keys: [key])
+        }
+
+        public func valuesInCache<Value>(
+            ofType: Value.Type = Value.self
+        ) -> [Key: Value] {
+            cache.compactMapValues { $0 as? Value }
         }
     }
     
@@ -251,7 +365,7 @@ public extension c {
 // MARK: - Global Cache
 
 public extension c {
-    private static var lock: NSLock? = NSLock()
+    private static var lock = NSLock()
     private static var caches: [AnyHashable: AnyCacheable] = [:]
     
     /// Get the Cache using the `key`. This returns an optional value. If the value is `nil`, that means the Cache doesn't exist.
@@ -259,8 +373,8 @@ public extension c {
         _ key: AnyHashable,
         as: CacheType.Type = CacheType.self
     ) -> CacheType? {
-        lock?.lock()
-        defer { lock?.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         return caches[key]?.base as? CacheType
     }
     
@@ -272,8 +386,8 @@ public extension c {
     
     /// Set the Cache using the `key`. This function will replace anything that has the same `key`.
     static func set<CacheType: Cacheable>(value: CacheType, forKey key: AnyHashable) {
-        lock?.lock()
+        lock.lock()
         caches[key] = AnyCacheable(value)
-        lock?.unlock()
+        lock.unlock()
     }
 }
