@@ -2,7 +2,7 @@
    <img src="https://openbytes.dev/assets/projects/images/openbytes-c.png" alt="Icon representing the OpenBytes c project." width="35%"/>
    <h1>c</h1>
    <h3>Micro Composition</h3>
-   <a href="https://github.com/0xOpenBytes/ios-base/blob/main/LICENSE">
+   <a href="https://github.com/0xOpenBytes/c/blob/main/LICENSE">
      <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/>
    </a>
    <img src="https://img.shields.io/github/v/release/0xOpenBytes/c"/>
