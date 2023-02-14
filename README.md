@@ -1,6 +1,15 @@
-# c
-
-*Micro Composition*
+<div align="center">
+   <img src="https://openbytes.dev/assets/projects/images/openbytes-c.png" alt="Icon representing the OpenBytes c project." width="35%"/>
+   <h1>c</h1>
+   <h3>Micro Composition</h3>
+   <a href="https://github.com/0xOpenBytes/ios-base/blob/main/LICENSE">
+     <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/>
+   </a>
+   <img src="https://img.shields.io/github/v/release/0xOpenBytes/c"/>
+   <a href="https://discord.gg/HUmaDXVsW7">
+     <img src="https://img.shields.io/discord/431917998102675485.svg" alt="Team Chat"/>
+   </a>
+ </div>
 
 ## What is `c`?
 `c` is a simple composition framework. You have the ability to create transformations that are either unidirectional or bidirectional. There is also a cache that values can be set and resolved. 
