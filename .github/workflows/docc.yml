@@ -27,7 +27,7 @@ jobs:
             transform-for-static-hosting /tmp/docbuild/Build/Products/Debug-iphoneos/c.doccarchive \
             --hosting-base-path c \
             --output-path docs;
-          echo "<script>window.location.href += \"/documentation/scribe\"</c>" > docs/index.html;
+          echo "<script>window.location.href += \"/documentation/c\"</script>" > docs/index.html;
       - name: artifacts
         uses: actions/upload-pages-artifact@v1
         with:
