@@ -55,12 +55,12 @@ let nilValue: Double? = cache.get("🥧")
 try t.assert(isNil: nilValue)
 ```
 
-### KeyedCache
+### Cache
 
 ```swift
 enum CacheKey: Hashable { ... }
 
-let cache = c.KeyedCache<CacheKey>()
+let cache = c.Cache<CacheKey, Any>()
 
 cache.set(value: Double.pi, forKey: CacheKey.piKey)
 
