@@ -92,7 +92,7 @@ public enum c {
             cache = initialValues
         }
         
-        open func get<Output>(_ key: Key, as: Output.Type = Output.self) -> Output? {
+        open func get<Output>(_ key: Key, as: Output.Type = Value.self) -> Output? {
             lock.lock()
             defer { lock.unlock() }
             guard let value = cache[key] as? Output else {
@@ -118,7 +118,7 @@ public enum c {
             return value
         }
         
-        open func resolve<Output>(_ key: Key, as: Output.Type = Output.self) throws -> Output {
+        open func resolve<Output>(_ key: Key, as: Output.Type = Value.self) throws -> Output {
             guard contains(key) else {
                 throw MissingRequiredKeysError(keys: [key])
             }
