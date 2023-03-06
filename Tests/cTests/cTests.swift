@@ -19,7 +19,7 @@ final class cTests: XCTestCase {
                 }
                 
                 try t.expect("that a cache works") {
-                    let cache = c.Cache()
+                    let cache = c.Cache<AnyHashable, Any>()
                     
                     cache.set(value: Double.pi, forKey: "🥧")
                     
@@ -50,11 +50,11 @@ final class cTests: XCTestCase {
                             forKey: "cache"
                         )
                         
-                        try t.assert(isNotNil: c.get("cache", as: c.Cache.self))
+                        try t.assert(isNotNil: c.get("cache", as: c.Cache<AnyHashable, Any>.self))
                     }
                     
                     try t.expect("that we can update a Cache and add a new one") {
-                        guard let cache: c.Cache = c.get("cache") else { throw t.error(description: "Could not find Cache.") }
+                        guard let cache: c.Cache<AnyHashable, Any> = c.get("cache") else { throw t.error(description: "Could not find Cache.") }
                         
                         cache.set(value: "Hello, World!", forKey: "hello")
                         
@@ -66,15 +66,15 @@ final class cTests: XCTestCase {
                         c.set(value: cache, forKey: "cache")
                         
                         c.set(
-                            value: c.Cache(initialValues: ["hello": "Hi!"]),
+                            value: c.Cache<String, String>(initialValues: ["hello": "Hi!"]),
                             forKey: "cache2"
                         )
                     }
                     
                     try t.expect("that we can get both Caches") {
                         guard
-                            let cache: c.Cache = c.get("cache"),
-                            let cache2: c.Cache = c.get("cache2")
+                            let cache: c.Cache<AnyHashable, Any> = c.get("cache"),
+                            let cache2: c.Cache<String, String> = c.get("cache2")
                         else { throw t.error(description: "Missing a Cache.") }
                         
                         try t.assert(cache.get("hello"), isEqualTo: "Hello, World!")
@@ -95,7 +95,7 @@ final class cTests: XCTestCase {
         enum EnvironmentKey: Hashable {
             case appID
             
-            static var appCache: c.KeyedCache<EnvironmentKey> = c.KeyedCache(
+            static var appCache: c.Cache<EnvironmentKey, Any> = c.Cache(
                 initialValues: [
                     .appID: "APP-ID"
                 ]
@@ -113,7 +113,7 @@ final class cTests: XCTestCase {
             let l_appID: String = try! EnvironmentKey.appCache.resolve(EnvironmentKey.appID)
             
             // Globally Accessed Cache
-            let g_appID: String = try! c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID)
+            let g_appID: String = try! c.resolve("\(EnvironmentKey.self)", as: c.Cache<EnvironmentKey, Any>.self).resolve(.appID)
         }
         
         XCTAssert(
@@ -129,12 +129,12 @@ final class cTests: XCTestCase {
                 
                 try t.expect {
                     try t.assert(
-                        c.resolve("someCache", as: c.Cache.self).resolve(EnvironmentKey.appID),
+                        c.resolve("someCache", as: c.Cache<EnvironmentKey, String>.self).resolve(EnvironmentKey.appID),
                         isEqualTo: "!!!"
                     )
                     
                     try t.assert(
-                        c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID),
+                        c.resolve("\(EnvironmentKey.self)", as: c.Cache<EnvironmentKey, Any>.self).resolve(.appID),
                         isEqualTo: "???"
                     )
                     
@@ -143,10 +143,10 @@ final class cTests: XCTestCase {
                         isEqualTo: "???"
                     )
                     
-                    try c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).set(value: "😎", forKey: .appID)
+                    try c.resolve("\(EnvironmentKey.self)", as: c.Cache<EnvironmentKey, Any>.self).set(value: "😎", forKey: .appID)
                     
                     try t.assert(
-                        c.resolve("\(EnvironmentKey.self)", as: c.KeyedCache<EnvironmentKey>.self).resolve(.appID),
+                        c.resolve("\(EnvironmentKey.self)", as: c.Cache<EnvironmentKey, Any>.self).resolve(.appID),
                         isEqualTo: "😎"
                     )
                     

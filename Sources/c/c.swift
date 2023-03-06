@@ -2,20 +2,21 @@ import Foundation.NSLock
 
 public protocol Cacheable: AnyObject {
     associatedtype Key: Hashable
+    associatedtype Value
 
     /// Returns a Dictionary containing all the key value pairs of the cache
-    var allValues: [Key: Any] { get }
+    var allValues: [Key: Value] { get }
     
-    init(initialValues: [Key: Any])
+    init(initialValues: [Key: Value])
     
     /// Get the value in the `cache` using the `key`. This returns an optional value. If the value is `nil`, that means either the value doesn't exist or the value is not able to be casted as `Value`.
-    func get<Value>(_ key: Key, as: Value.Type) -> Value?
+    func get<Output>(_ key: Key, as: Output.Type) -> Output?
     
     /// Resolve the value in the `cache` using the `key`. This should only be used when you know the value is always in the `cache`.
-    func resolve<Value>(_ key: Key, as: Value.Type) throws -> Value
+    func resolve<Output>(_ key: Key, as: Output.Type) throws -> Output
     
     /// Set the value in the `cache` using the `key`. This function will replace anything in the `cache` that has the same `key`.
-    func set<Value>(value: Value, forKey key: Key)
+    func set(value: Value, forKey key: Key)
     
     /// Remove the value in the `cache` using the `key`.
     func remove(_ key: Key)
@@ -30,14 +31,14 @@ public protocol Cacheable: AnyObject {
     func require(_ key: Key) throws -> Self
     
     /// Returns a Dictionary containing only the key value pairs where the value is the same type as the generic type `Value`
-    func valuesInCache<Value>(
-        ofType: Value.Type
-    ) -> [Key: Value]
+    func valuesInCache<Output>(
+        ofType: Output.Type
+    ) -> [Key: Output]
 }
 
 public extension Cacheable {
-    var allValues: [Key: Any] {
-        valuesInCache(ofType: Any.self)
+    var allValues: [Key: Value] {
+        valuesInCache(ofType: Value.self)
     }
 }
 
@@ -82,19 +83,19 @@ public enum c {
         }
     }
     
-    open class KeyedCache<Key: Hashable>: Cacheable {
+    open class Cache<Key: Hashable, Value>: Cacheable {
         fileprivate var lock: NSLock
-        fileprivate var cache: [Key: Any]
+        fileprivate var cache: [Key: Value]
         
-        required public init(initialValues: [Key: Any] = [:]) {
+        required public init(initialValues: [Key: Value] = [:]) {
             lock = NSLock()
             cache = initialValues
         }
         
-        open func get<Value>(_ key: Key, as: Value.Type = Value.self) -> Value? {
+        open func get<Output>(_ key: Key, as: Output.Type = Output.self) -> Output? {
             lock.lock()
             defer { lock.unlock() }
-            guard let value = cache[key] as? Value else {
+            guard let value = cache[key] as? Output else {
                 return nil
             }
             
@@ -110,26 +111,26 @@ public enum c {
             
             guard let (_, unwrappedValue) = mirror.children.first else { return nil }
             
-            guard let value = unwrappedValue as? Value else {
+            guard let value = unwrappedValue as? Output else {
                 return nil
             }
             
             return value
         }
         
-        open func resolve<Value>(_ key: Key, as: Value.Type = Value.self) throws -> Value {
+        open func resolve<Output>(_ key: Key, as: Output.Type = Output.self) throws -> Output {
             guard contains(key) else {
                 throw MissingRequiredKeysError(keys: [key])
             }
 
-            guard let value: Value = get(key) else {
-                throw InvalidTypeError(expectedType: Value.self, actualValue: get(key))
+            guard let value: Output = get(key) else {
+                throw InvalidTypeError(expectedType: Output.self, actualValue: get(key))
             }
 
             return value
         }
         
-        open func set<Value>(value: Value, forKey key: Key) {
+        open func set(value: Value, forKey key: Key) {
             lock.lock()
             cache[key] = value
             lock.unlock()
@@ -160,16 +161,10 @@ public enum c {
             try require(keys: [key])
         }
         
-        open func valuesInCache<Value>(
-            ofType: Value.Type = Value.self
-        ) -> [Key: Value] {
-            cache.compactMapValues { $0 as? Value }
-        }
-    }
-    
-    public class Cache: KeyedCache<AnyHashable> {
-        required public init(initialValues: [Key: Any] = [:]) {
-            super.init(initialValues: initialValues)
+        open func valuesInCache<Output>(
+            ofType: Output.Type = Output.self
+        ) -> [Key: Output] {
+            cache.compactMapValues { $0 as? Output }
         }
     }
     
