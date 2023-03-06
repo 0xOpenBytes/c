@@ -92,7 +92,7 @@ public enum c {
             cache = initialValues
         }
         
-        open func get<Output>(_ key: Key, as: Output.Type = Value.self) -> Output? {
+        open func get<Output>(_ key: Key, as: Output.Type = Output.self) -> Output? {
             lock.lock()
             defer { lock.unlock() }
             guard let value = cache[key] as? Output else {
@@ -118,7 +118,7 @@ public enum c {
             return value
         }
         
-        open func resolve<Output>(_ key: Key, as: Output.Type = Value.self) throws -> Output {
+        open func resolve<Output>(_ key: Key, as: Output.Type = Output.self) throws -> Output {
             guard contains(key) else {
                 throw MissingRequiredKeysError(keys: [key])
             }
@@ -331,6 +331,16 @@ public enum c {
         public init<CacheType: Cacheable>(_ base: CacheType) {
             self.base = base
         }
+    }
+}
+
+public extension c.Cache {
+    func get(_ key: Key) -> Value? {
+        get(key, as: Value.self)
+    }
+
+    func resolve(_ key: Key) throws -> Value {
+        try resolve(key, as: Value.self)
     }
 }
 
